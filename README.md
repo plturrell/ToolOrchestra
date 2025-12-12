@@ -1,123 +1,161 @@
 # ToolOrchestra: Elevating Intelligence via Efficient Model and Tool Orchestration
 
-[![Paper](https://img.shields.io/badge/ArXiv-Paper-brown)](https://arxiv.org/abs/2511.21689)
-[![Code](https://img.shields.io/badge/GitHub-Link-orange)](https://github.com/NVlabs/ToolOrchestra/)
-[![Model](https://img.shields.io/badge/HuggingFace-Model-green)](https://huggingface.co/nvidia/Orchestrator-8B)
-[![Data](https://img.shields.io/badge/HuggingFace-Data-blue)](https://huggingface.co/datasets/nvidia/ToolScale)
-[![Website](https://img.shields.io/badge/Web-Page-purple)](https://research.nvidia.com/labs/lpr/ToolOrchestra/)
+<p align="center">
+  <a href="https://arxiv.org/abs/2511.21689"><img src="https://img.shields.io/badge/ArXiv-Paper-brown" alt="Paper"></a>
+  <a href="https://github.com/NVlabs/ToolOrchestra/"><img src="https://img.shields.io/badge/GitHub-Code-orange" alt="Code"></a>
+  <a href="https://huggingface.co/nvidia/Orchestrator-8B"><img src="https://img.shields.io/badge/🤗%20HuggingFace-Model-green" alt="Model"></a>
+  <a href="https://huggingface.co/datasets/nvidia/ToolScale"><img src="https://img.shields.io/badge/🤗%20HuggingFace-Data-blue" alt="Data"></a>
+  <a href="https://research.nvidia.com/labs/lpr/ToolOrchestra/"><img src="https://img.shields.io/badge/Project-Page-purple" alt="Website"></a>
+</p>
 
+<p align="center">
+<b><a href="https://hongjin-su.github.io/">Hongjin Su</a>*</b>, <b><a href="https://shizhediao.github.io/">Shizhe Diao</a>*</b>, <a href="https://gloriaximinglu.github.io/">Ximing Lu</a>, <a href="https://research.nvidia.com/person/mingjie-liu">Mingjie Liu</a>, <a href="https://jiacheng-xu.github.io/">Jiacheng Xu</a>, <a href="https://simonxin.com/">Xin Dong</a>, <a href="https://www.yongganfu.com/">Yonggan Fu</a>, <a href="https://pbelcak.com/">Peter Belcak</a>, <a href="https://sites.google.com/site/yhrspace/home">Hanrong Ye</a>, <a href="https://hongxu-yin.github.io/">Hongxu Yin</a>, <a href="https://www.linkedin.com/in/yi-dong-04057b18/">Yi Dong</a>, <a href="https://developer.nvidia.com/blog/author/ebakhturina/">Evelina Bakhturina</a>, <a href="https://taoyds.github.io/">Tao Yu</a>, <a href="https://yejinc.github.io/">Yejin Choi</a>, <a href="https://jankautz.com/">Jan Kautz</a>, <a href="https://www.pmolchanov.com/">Pavlo Molchanov</a>
+</p>
 
-[Hongjin Su*](https://hongjin-su.github.io/), [Shizhe Diao*](https://shizhediao.github.io/), [Ximing Lu](https://gloriaximinglu.github.io/), [Mingjie Liu](https://research.nvidia.com/person/mingjie-liu), [Jiacheng Xu](https://jiacheng-xu.github.io/), [Xin Dong](https://simonxin.com/), [Yonggan Fu](https://www.yongganfu.com/), [Peter Belcak](https://pbelcak.com/), [Hanrong Ye](https://sites.google.com/site/yhrspace/home), [Hongxu Yin](https://hongxu-yin.github.io/), [Yi Dong](https://www.linkedin.com/in/yi-dong-04057b18/), [Evelina Bakhturina](https://developer.nvidia.com/blog/author/ebakhturina/), [Tao Yu](https://taoyds.github.io/), [Yejin Choi](https://yejinc.github.io/), [Jan Kautz](https://jankautz.com/), [Pavlo Molchanov](https://www.pmolchanov.com/)  
+<p align="center">
+<b>NVIDIA</b> &nbsp;·&nbsp; <b>The University of Hong Kong</b><br>
+<sup>*</sup>Equal Contribution
+</p>
 
-<span style="color: rgb(133, 184, 55);">**NVIDIA**</span>,  <span style="color: rgb(184, 154, 55);">**The University of Hong Kong**</span>  
-*Equal Contribution
+---
 
-<p align="center" width="100%">
+<p align="center">
 <img src="https://raw.githubusercontent.com/NVlabs/ToolOrchestra/main/assets/results_figure.png" alt="ToolOrchestra Performance" style="width: 100%; min-width: 300px; display: block; margin: auto;">
 </p>
 
-We introduce ToolOrchestra, a method for training small orchestrators that coordinate the use of intelligent tools. By using both tools and specialized models, ToolOrchestrator surpasses GPT-5 while is much more efficient. Given a task, the Orchestrator alternates between reasoning and tool calling in multiple turns to solve it. Orchestrator interacts with a diverse tool set, including basic tools (e.g., web search, code interpreter), specialized LLMs (e.g., coding models, math models) and generalist LLMs (e.g., GPT-5, Llama-Nemotron-Ultra-253B, Claude Opus 4.1). In training, Orchestrator is jointly optimized by outcome, efficiency and preference rewards via end-to-end reinforcement learning. To aid RL training, we develop an automatic pipeline to synthesize both environment and tool-call tasks at scale.
-
+We introduce **ToolOrchestra**, a method for training small orchestrators that coordinate the use of intelligent tools. By using both tools and specialized models, ToolOrchestra surpasses GPT-5 while being much more efficient. Given a task, the Orchestrator alternates between reasoning and tool calling in multiple turns to solve it. The Orchestrator interacts with a diverse tool set, including basic tools (e.g., web search, code interpreter), specialized LLMs (e.g., coding models, math models), and generalist LLMs (e.g., GPT-5, Llama-Nemotron-Ultra-253B, Claude Opus 4.1). During training, Orchestrator is jointly optimized by outcome, efficiency, and preference rewards via end-to-end reinforcement learning. To aid RL training, we develop an automatic pipeline to synthesize both environment and tool-call tasks at scale.
 
 <p align="center">
-    <img src="https://raw.githubusercontent.com/NVlabs/ToolOrchestra/main/assets/method.png" width="100%"/>
-<p>
+<img src="https://raw.githubusercontent.com/NVlabs/ToolOrchestra/main/assets/method.png" width="100%"/>
+</p>
 
-With ToolOrchestra, we produce Orchestrator-8B, a state-of-the-art 8B parameter orchestration model designed to solve complex, multi-turn agentic tasks by coordinating a diverse set of expert models and tools. 
-On HLE, Orchestrator-8B achieves a score of 37.1%, outperforming GPT-5 (35.1%) while being 2.5x more efficient. On τ2-Bench and FRAMES, Orchestrator-8B surpasses GPT-5 by a wide margin while using only about 30% of the cost.
+With ToolOrchestra, we produce **Orchestrator-8B**, a state-of-the-art 8B parameter orchestration model designed to solve complex, multi-turn agentic tasks by coordinating a diverse set of expert models and tools.
 
+**Key Results:**
+- On **HLE**, Orchestrator-8B achieves a score of **37.1%**, outperforming GPT-5 (35.1%) while being **2.5× more efficient**
+- On **τ2-Bench** and **FRAMES**, Orchestrator-8B surpasses GPT-5 by a wide margin while using only **~30% of the cost**
 
-## Setup Environment
-```
-# git clone this repository
-git clone https://gitlab-master.nvidia.com/dler/toolorchestra
-cd toolorchestra
+---
 
-# change the directory to `toolorchestra`
-cd toolorchestra
+## 🛠️ Setup Environment
 
-# download index files and checkpoints
+```bash
+# Clone this repository
+git clone https://github.com/NVlabs/ToolOrchestra
+cd ToolOrchestra
+
+# Download index files and checkpoints
 git clone https://huggingface.co/datasets/multi-train/index
 export INDEX_DIR='/path/to/index'
-git clone https://huggingface.co/multi-train/ToolOrchestrator
+git clone https://huggingface.co/nvidia/Nemotron-Orchestrator-8B
 export CHECKPOINT_PATH='/path/to/checkpoint'
 
-# environment setup for training
+# Set environment variables
+export HF_HOME="/path/to/huggingface"
+export REPO_PATH="/path/to/this_repo"
+export CKPT_DIR="/path/to/checkpoint"
+```
+
+### Environment for Training
+
+```bash
 conda create -n toolorchestra python=3.12 -y
 conda activate toolorchestra
 pip install -r requirements.txt
 pip install -e training/rollout
+```
 
-# environment setup for retrieval
+### Environment for Retrieval
+
+```bash
 conda create -n retriever python=3.12 -y
 conda activate retriever
 conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 pytorch-cuda=12.1 -c pytorch -c nvidia
 pip install transformers datasets pyserini
 conda install -c pytorch -c nvidia faiss-gpu
 pip install uvicorn fastapi
+```
 
-# environment setup for vllm models
+### Environment for vLLM Models
+
+```bash
 conda create -n vllm1 python=3.12 -y
+conda activate vllm1
 pip install torch transformers vllm
 cd evaluation/tau2-bench
 pip install -e .
-
-# set environment variables
-export HF_HOME="/path/to/huggingface"
-export REPO_PATH="/path/to/this_repo"
-export CKPT_DIR="/path/to/checkpoint"
 ```
 
-## Training
+---
+
+## 🚀 Training
 
 ```bash
 cd training
 python resume_h100.py
 ```
 
-## Evaluation
+---
+
+## 📊 Evaluation
 
 ```bash
 cd evaluation
-# eval HLE (require env vllm1 and retriever)
+
+# Evaluate on HLE (requires env: vllm1 and retriever)
 python run_hle.py
 
-# eval Frames (require env vllm1 and retriever)
+# Evaluate on FRAMES (requires env: vllm1 and retriever)
 python run_frames.py
 
-# eval tau2-bench (require env vllm1, double check tau2-bench is installed in eval directory)
+# Evaluate on τ2-Bench (requires env: vllm1)
 cd tau2-bench/
 python run.py
 ```
 
-## Search API
-Please go to https://app.tavily.com/home and apply for a Tavily API key.
-```
-export TAVILY_KEY="your key"
+---
+
+## 🔍 Search API
+
+Please go to [Tavily](https://app.tavily.com/home) and apply for an API key.
+
+```bash
+export TAVILY_KEY="your_key"
 ```
 
+---
 
-## How to Make Changes
-- Modify function `get_llm_response` in `LLM_CALL.py` to change LLM call to service beyond vllm and openai
-- Modify line `455-458` in `eval_hle.py` and `506-509` in `eval_frames.py` to modify prompts
-- Substitute tool_config in line 27 in `eval_frames.py` and line 27 in `eval_hle.py` if using different tool set.
-- Modify `tools.json` and `call_tool` function in `eval_hle.py` to modify the tools and models.
-- If you want to run multiple experiments in parallel, modify variables `{EXPERIMENT_NAME1}`, `{EXPERIMENT_NAME2}`, `{EXPERIMENT_NAME3}` in `training/resume_h100.py`, which should correspond to the file name and job name in `{EXPERIMENT_NAME1}.sh`, `{EXPERIMENT_NAME2}.sh`, `{EXPERIMENT_NAME3}.sh` under the directory.
-- To prevent connection errors to host models in HLE, you may comment [this line](https://github.com/NVlabs/ToolOrchestra/blob/main/evaluation/run_hle.py#L248), and run the following two commands in separate processes:
-```
+## ⚙️ Customization
+
+- **LLM Calls**: Modify the `get_llm_response` function in `LLM_CALL.py` to change LLM calls to services beyond vLLM and OpenAI
+- **Prompts**: Modify lines `455-458` in `eval_hle.py` and `506-509` in `eval_frames.py`
+- **Tool Configuration**: Substitute `tool_config` in line 27 of `eval_frames.py` and `eval_hle.py` for different tool sets
+- **Tools & Models**: Modify `tools.json` and the `call_tool` function in `eval_hle.py`
+- **Parallel Experiments**: Modify variables `{EXPERIMENT_NAME1}`, `{EXPERIMENT_NAME2}`, `{EXPERIMENT_NAME3}` in `training/resume_h100.py`, which should correspond to the file names in the directory
+
+### Preventing Connection Errors
+
+To prevent connection errors to host models in HLE, you may comment [this line](https://github.com/NVlabs/ToolOrchestra/blob/main/evaluation/run_hle.py#L248), then run:
+
+```bash
+# In separate processes
 python run_hle.py
 python eval_hle.py --model_name {cur_ckpt_dir} --output_dir {cur_output_dir} --model_config model_configs/serve2.json --example_path hle.jsonl
 ```
 
-## License
+---
 
-The code included in this project is licensed under the [Apache 2.0 license](https://github.com/NVlabs/ToolOrchestra/blob/main/LICENSE).
+## 📜 License
 
-## Citation
+This project is licensed under the [Apache 2.0 License](https://github.com/NVlabs/ToolOrchestra/blob/main/LICENSE).
 
-If you find this repository useful, please consider giving ⭐ and citing our [paper](https://arxiv.org/abs/2511.21689):
+---
 
-```citation
+## 📝 Citation
+
+If you find this repository useful, please consider giving a ⭐ and citing our [paper](https://arxiv.org/abs/2511.21689):
+
+```bibtex
 @misc{toolorchestra,
       title={ToolOrchestra: Elevating Intelligence via Efficient Model and Tool Orchestration}, 
       author={Hongjin Su and Shizhe Diao and Ximing Lu and Mingjie Liu and Jiacheng Xu and Xin Dong and Yonggan Fu and Peter Belcak and Hanrong Ye and Hongxu Yin and Yi Dong and Evelina Bakhturina and Tao Yu and Yejin Choi and Jan Kautz and Pavlo Molchanov},
