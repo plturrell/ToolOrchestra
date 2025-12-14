@@ -20,6 +20,21 @@ import subprocess
 import requests
 from datetime import datetime
 import pytz
+import re
+
+
+def _run(cmd: list[str]) -> None:
+    """Run a command safely without invoking a shell."""
+    subprocess.run(cmd, check=False)
+
+
+_SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _safe_name(name: str) -> str:
+    if not _SAFE_NAME_RE.fullmatch(name):
+        raise ValueError(f"Unsafe name: {name!r}")
+    return name
 
 def print_time():
     la_timezone = pytz.timezone('America/Los_Angeles')
@@ -27,7 +42,8 @@ def print_time():
     print(f"Current time: {current_time_la.strftime('%Y-%m-%d %H:%M:%S')}")
 
 def get_jobs():
-    exec_result = subprocess.run(['squeue', '-u',os.environ.get('USER',None)], timeout=3600, capture_output=True, text=True)
+    user = os.environ.get("USER") or ""
+    exec_result = subprocess.run(['squeue', '-u', user], timeout=3600, capture_output=True, text=True)
     lines = exec_result.stdout.strip().split('\n')[1:]
     jobs = []
     for l in lines:
@@ -57,15 +73,15 @@ def get_jobs():
         })
     return jobs
 
-EXPERIMENT_NAME1 = os.environ.get('EXPERIMENT_NAME1', 'se_t4_1')
-EXPERIMENT_NAME2 = os.environ.get('EXPERIMENT_NAME2', 'se_t4_2')
-EXPERIMENT_NAME3 = os.environ.get('EXPERIMENT_NAME3', 'se_t4_3')
+EXPERIMENT_NAME1 = _safe_name(os.environ.get('EXPERIMENT_NAME1', 'se_t4_1'))
+EXPERIMENT_NAME2 = _safe_name(os.environ.get('EXPERIMENT_NAME2', 'se_t4_2'))
+EXPERIMENT_NAME3 = _safe_name(os.environ.get('EXPERIMENT_NAME3', 'se_t4_3'))
 serve_collections = [EXPERIMENT_NAME1, EXPERIMENT_NAME2, EXPERIMENT_NAME3]
 while True:
     jobs = get_jobs()
     for j in jobs:
         if j['reason'].strip().lower()=='held)':
-            os.system(f"scancel {j['id']}")
+            _run(["scancel", str(j["id"])])
             time.sleep(120)
     job_names = [j['name'] for j in jobs]
     for exp_name in serve_collections:
@@ -74,12 +90,12 @@ while True:
             with FileLock(f'cache/slurm_out/{exp_name}.lock'):
                 if os.path.isfile(f'cache/slurm_out/{exp_name}.out'):
                     os.remove(f'cache/slurm_out/{exp_name}.out')
-                os.system('sbatch '+f' {exp_name}.sh')
+                _run(["sbatch", f"{exp_name}.sh"])
     already_serve = []
     for j in jobs:
         if j['name'] in serve_collections and j['status'].strip().lower()=='r':
             if not os.path.isfile(f'{j["name"]}.out'):
-                os.system(f"scancel {j['id']}")
+                _run(["scancel", str(j["id"])])
             else:
                 if j['total_time']>=600:
                     already_serve.append({
@@ -141,7 +157,7 @@ while True:
             for j in jobs:
                 if j['name'].startswith(EXPERIMENT_NAME1):
                     print(f"scancel {j['id']}")
-                    os.system(f"scancel {j['id']}")
+                    _run(["scancel", str(j["id"])])
             break
     if not serve_alive:
         continue
@@ -163,7 +179,7 @@ while True:
     with open('serve_train_tool_orchestra.json','w') as f:
         json.dump(model_config,f,indent=2)
     if not 'run' in job_names:
-        os.system('sbatch '+' resume_run_h100.sh')
+        _run(["sbatch", "resume_run_h100.sh"])
     time.sleep(60)
 
     

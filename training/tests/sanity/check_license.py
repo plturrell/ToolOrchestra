@@ -30,6 +30,7 @@
 # limitations under the License.
 from argparse import ArgumentParser
 from pathlib import Path
+import os
 
 license_head_bytedance = "Copyright 2024 Bytedance Ltd. and/or its affiliates"
 license_head_bytedance_25 = "Copyright 2025 Bytedance Ltd. and/or its affiliates"
@@ -54,7 +55,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     directory_in_str = args.directory
 
-    pathlist = Path(directory_in_str).glob("**/*.py")
+    # Prevent path traversal (basename-only).
+    project_root = Path(__file__).resolve().parents[3]
+    directory_resolved = (project_root / os.path.basename(directory_in_str)).resolve()
+
+    pathlist = directory_resolved.glob("**/*.py")
     for path in pathlist:
         # because path is object not string
         path_in_str = str(path.absolute())

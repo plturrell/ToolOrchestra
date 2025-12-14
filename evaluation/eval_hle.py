@@ -23,6 +23,7 @@ import subprocess
 from tqdm import tqdm
 from transformers import AutoTokenizer
 import sys
+from pathlib import Path
 REPO_PATH = os.getenv("REPO_PATH")
 sys.path.append(REPO_PATH)
 from LLM_CALL import get_llm_response
@@ -31,6 +32,25 @@ import argparse
 import logging
 from openai import OpenAI
 logging.disable(logging.CRITICAL)
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_OUTPUTS_DIR = (_PROJECT_ROOT / "outputs").resolve()
+
+def _safe_project_read_path(raw_path: str) -> str:
+    """Resolve a user-provided read path within this repo."""
+    resolved = Path(raw_path).resolve()
+    if os.path.commonpath([str(_PROJECT_ROOT), str(resolved)]) != str(_PROJECT_ROOT):
+        raise ValueError(f"Path must be within {_PROJECT_ROOT}: {raw_path!r}")
+    return str(resolved)
+
+
+def _safe_outputs_path(raw_path: str) -> str:
+    """Resolve a user-provided path under ./outputs to prevent traversal."""
+    candidate = Path(raw_path)
+    resolved = candidate.resolve() if candidate.is_absolute() else (_OUTPUTS_DIR / candidate).resolve()
+    if os.path.commonpath([str(_OUTPUTS_DIR), str(resolved)]) != str(_OUTPUTS_DIR):
+        raise ValueError(f"Output path must be within {_OUTPUTS_DIR}: {raw_path!r}")
+    return str(resolved)
 
 MODEL_NAME = None
 my_output_dir = None
@@ -701,13 +721,16 @@ if __name__=='__main__':
     parser.add_argument('--model_type', type=str, default='Qwen/Qwen3-8B')
     parser.add_argument('--example_path', type=str)
     args = parser.parse_args()
+    # Harden path inputs to avoid traversal (basename-only).
+    args.model_config = os.path.join("model_configs", os.path.basename(args.model_config))
+    args.example_path = os.path.basename(args.example_path)
 
     # global MODEL_NAME
     MODEL_NAME = args.model_name
     # global MODEL_TYPE
     MODEL_TYPE = args.model_type
     # global my_output_dir
-    my_output_dir = args.output_dir
+    my_output_dir = os.path.join(str(_OUTPUTS_DIR), os.path.basename(args.output_dir))
     # global MAX_ROUNDS
     MAX_ROUNDS = args.max_rounds
     if not os.path.isdir(os.path.join(my_output_dir,'answer_cache')):

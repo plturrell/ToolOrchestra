@@ -29,8 +29,21 @@ import json
 import os
 import warnings
 from typing import Any, Dict
+from pathlib import Path
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, PretrainedConfig
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_OUTPUTS_DIR = (_PROJECT_ROOT / "outputs").resolve()
+
+
+def _safe_project_path(raw_path: str) -> str:
+    """Resolve a user-provided path under the repo to prevent traversal."""
+    candidate = Path(raw_path)
+    resolved = candidate.resolve() if candidate.is_absolute() else (_PROJECT_ROOT / candidate).resolve()
+    if os.path.commonpath([str(_PROJECT_ROOT), str(resolved)]) != str(_PROJECT_ROOT):
+        raise ValueError(f"Path must be within {_PROJECT_ROOT}: {raw_path!r}")
+    return str(resolved)
 
 
 def _init_args():
@@ -39,6 +52,9 @@ def _init_args():
     parser.add_argument("--new_config_path", type=str, required=True, help="The path for the new config file")
     parser.add_argument("--output_path", type=str, required=True, help="The path for the output random model")
     args = parser.parse_args()
+    # Harden path inputs (basename-only) to avoid path traversal.
+    args.new_config_path = str((_PROJECT_ROOT / os.path.basename(args.new_config_path)).resolve())
+    args.output_path = str((_OUTPUTS_DIR / os.path.basename(args.output_path)).resolve())
     return args
 
 

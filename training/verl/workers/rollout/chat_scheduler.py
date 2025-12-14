@@ -34,6 +34,7 @@ import importlib
 import itertools
 import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 from uuid import uuid4
@@ -363,7 +364,9 @@ class ChatCompletionScheduler:
             info["__done__"].set()
 
     async def _chat_completions_openai(self, address: str, **chat_complete_request) -> ChatCompletion:
-        client = AsyncOpenAI(base_url=f"http://{address}/v1", api_key="token-abc123", timeout=None, max_retries=0)
+        # Avoid hardcoded placeholder "secrets" in source; some local servers accept any token.
+        api_key = os.environ.get("VLLM_API_KEY") or uuid4().hex
+        client = AsyncOpenAI(base_url=f"http://{address}/v1", api_key=api_key, timeout=None, max_retries=0)
         return await client.chat.completions.create(**chat_complete_request)
 
     async def _chat_completions_aiohttp(self, address: str, **chat_complete_request) -> ChatCompletion:
@@ -371,11 +374,12 @@ class ChatCompletionScheduler:
             extra_body = chat_complete_request.pop("extra_body", {})
             chat_complete_request.update(extra_body or {})
             extra_headers = chat_complete_request.pop("extra_headers")
+            api_key = os.environ.get("VLLM_API_KEY") or uuid4().hex
             timeout = aiohttp.ClientTimeout(total=None)
             session = aiohttp.ClientSession(timeout=timeout)
             async with session.post(
                 url=f"http://{address}/v1/chat/completions",
-                headers={"Authorization": "Bearer token-abc123", **extra_headers},
+                headers={"Authorization": f"Bearer {api_key}", **extra_headers},
                 json=chat_complete_request,
             ) as resp:
                 data = await resp.json()

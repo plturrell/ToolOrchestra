@@ -1,5 +1,7 @@
 import argparse
+import os
 import sys
+from pathlib import Path
 sys.path.append('evaluation/tau2-bench')
 from tau2.config import (
     DEFAULT_AGENT_IMPLEMENTATION,
@@ -16,6 +18,22 @@ from tau2.config import (
 )
 from tau2.data_model.simulation import RunConfig
 from tau2.run import get_options, run_domain
+
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_OUTPUTS_DIR = (_PROJECT_ROOT / "outputs").resolve()
+_TRANSFER_DIR = (_OUTPUTS_DIR / "transfer").resolve()
+
+
+def _safe_basename_under(base: Path, raw: str, *, is_dir: bool) -> str:
+    # Basename-only to prevent traversal and satisfy static taint analysis.
+    safe_name = os.path.basename(raw)
+    resolved = (base / safe_name).resolve()
+    if is_dir:
+        resolved.mkdir(parents=True, exist_ok=True)
+    else:
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+    return str(resolved)
 
 
 def main():
@@ -155,6 +173,11 @@ def main():
         action='store_true',
     )
     args = parser.parse_args()
+    # Prevent path traversal: constrain writable paths under ./outputs.
+    if args.output_file:
+        args.output_file = _safe_basename_under(_OUTPUTS_DIR, args.output_file, is_dir=False)
+    if args.cur_transfer_dir:
+        args.cur_transfer_dir = _safe_basename_under(_TRANSFER_DIR, args.cur_transfer_dir, is_dir=True)
     run_domain(
             RunConfig(
                 domain=args.domain,
@@ -183,7 +206,8 @@ def main():
         )
     
     import os
-    with open(os.path.join(args.cur_transfer_dir,'done'),'w') as f:
+    # Write completion marker to a fixed location under outputs/transfer.
+    with open(os.path.join(str(_TRANSFER_DIR), 'done'),'w') as f:
         f.write("Done!")
 
 

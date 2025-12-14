@@ -19,6 +19,11 @@ import time
 import requests
 import subprocess, signal
 
+
+def _run(cmd: list[str]) -> None:
+    """Run a command safely without invoking a shell."""
+    subprocess.run(cmd, check=False)
+
 SERVE_REPEAT = 1
 serve_script1 = """#!/bin/bash
 
@@ -79,7 +84,8 @@ CUDA_VISIBLE_DEVICES=6,7 vllm serve Qwen/Qwen2.5-Coder-32B-Instruct --port 1407 
 sleep 15000'''
 
 def get_jobs():
-    exec_result = subprocess.run(['squeue', '-u',os.environ.get('USER',None)], timeout=3600, capture_output=True, text=True)
+    user = os.environ.get("USER") or ""
+    exec_result = subprocess.run(['squeue', '-u', user], timeout=3600, capture_output=True, text=True)
     lines = exec_result.stdout.strip().split('\n')[1:]
     jobs = []
     for l in lines:
@@ -111,9 +117,11 @@ while True:
     jobs = get_jobs()
     for j in jobs:
         if j['reason'].strip().lower()=='held)':
-            os.system(f"scancel {j['id']}")
+            _run(["scancel", str(j["id"])])
             time.sleep(120)
     cur_ckpt_dir = os.getenv("CKPT_DIR")
+    if not cur_ckpt_dir:
+        raise ValueError("CKPT_DIR is not set")
     serve_collections = []
     for repeat in range(SERVE_REPEAT):
         exp_name1 = f"op_1{repeat}"
@@ -132,24 +140,24 @@ while True:
     job_names = [j['name'] for j in jobs]
     for j in jobs:
         if j['name'] not in serve_collections and j['name'].startswith('op'):
-            os.system(f"scancel {j['id']}")
+            _run(["scancel", str(j["id"])])
     for repeat in range(SERVE_REPEAT):
         exp_name = f"op_1{repeat}"
         if not exp_name in job_names:
             if os.path.isfile(f'slurm_out/{exp_name}.out'):
                 os.remove(f'slurm_out/{exp_name}.out')
-            os.system('sbatch '+f' {exp_name}.sh')
+            _run(["sbatch", f"{exp_name}.sh"])
         exp_name = f"run_{repeat}"
         if not exp_name in job_names:
             if os.path.isfile(f'slurm_out/{exp_name}.out'):
                 os.remove(f'slurm_out/{exp_name}.out')
-            os.system('sbatch '+f' {exp_name}.sh')
+            _run(["sbatch", f"{exp_name}.sh"])
     job_ids = [j['id'] for j in jobs]
     already_serve = []
     for j in jobs:
         if j['name'] in serve_collections and j['status'].strip().lower()=='r':
             if not os.path.isfile(f'slurm_out/{j["name"]}.out'):
-                os.system(f"scancel {j['id']}")
+                _run(["scancel", str(j["id"])])
             else:
                 if j['total_time']>=600:
                     already_serve.append({
@@ -229,7 +237,18 @@ while True:
             json.dump(model_config,f,indent=2)
 
     cur_output_dir = os.path.join(output_dir,f"26")
-    os.system(f"python eval_frames.py --model_name {cur_ckpt_dir} --output_dir {cur_output_dir} --model_config model_configs/serve_frames.json")
+    _run(
+        [
+            "python",
+            "eval_frames.py",
+            "--model_name",
+            str(cur_ckpt_dir),
+            "--output_dir",
+            str(cur_output_dir),
+            "--model_config",
+            "model_configs/serve_frames.json",
+        ]
+    )
 
     time.sleep(30)
 

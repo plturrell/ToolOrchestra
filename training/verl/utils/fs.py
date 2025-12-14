@@ -48,6 +48,15 @@ __all__ = ["copy", "exists", "makedirs"]
 _HDFS_PREFIX = "hdfs://"
 
 
+def sha256_encode(value: str) -> str:
+    """Generate a stable SHA-256 hash of a string.
+
+    This is used to create deterministic identifiers (e.g. cache directories)
+    without relying on insecure hashes like MD5.
+    """
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
 def is_non_local(path):
     """Check if a path is a non-local (HDFS) path.
 
@@ -72,7 +81,8 @@ def md5_encode(path: str) -> str:
     Returns:
         str: The hexadecimal MD5 hash of the path.
     """
-    return hashlib.md5(path.encode()).hexdigest()
+    # Backwards-compatible name: we no longer use MD5 internally.
+    return sha256_encode(path)
 
 
 def get_local_temp_path(hdfs_path: str, cache_dir: str) -> str:
@@ -160,7 +170,7 @@ def copy_to_shm(src:str):
     """
     shm_model_root = '/dev/shm/verl-cache/'
     src_abs = os.path.abspath(os.path.normpath(src))
-    dest = os.path.join(shm_model_root, hashlib.md5(src_abs.encode('utf-8')).hexdigest())
+    dest = os.path.join(shm_model_root, sha256_encode(src_abs))
     os.makedirs(dest, exist_ok=True)
     dest = os.path.join(dest, os.path.basename(src_abs))
     if os.path.exists(dest) and verify_copy(src, dest):

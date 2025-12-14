@@ -23,11 +23,20 @@ import requests
 import subprocess
 from openai import OpenAI
 import random
+import secrets
 from typing import List, Tuple, Dict, Any, Optional
 
 KEYS_DIR = 'keys'
 if not os.path.isdir(KEYS_DIR):
     os.makedirs(KEYS_DIR,exist_ok=True)
+
+def _runtime_api_key(env_var: str = "TOOLORCHESTRA_API_KEY") -> str:
+    """Return a runtime-generated token to avoid hardcoded secret strings.
+
+    Some local OpenAI-compatible servers accept any token; we still avoid
+    committing placeholder secrets in source code.
+    """
+    return os.environ.get(env_var) or secrets.token_urlsafe(24)
 
 def convert_openai_tools_to_claude(openai_tools: list) -> list:
     claude_tools = []
@@ -242,7 +251,8 @@ def get_openai_token(p_token_url, p_client_id, p_client_secret, p_scope, **kwarg
             "access_token": token["access_token"],
             'expire_at': time.time()+900
         },f,indent=2)
-    os.chmod(str(os.path.join(KEYS_DIR,f'openai_key.json')), 0o777)
+    # Owner read/write only.
+    os.chmod(str(os.path.join(KEYS_DIR,f'openai_key.json')), 0o600)
 
     return token["access_token"]
 
@@ -265,7 +275,8 @@ def get_claude_token():
             "access_token": result,
             'expire_at': time.time()+900
         },f,indent=2)
-    os.chmod(str(os.path.join(KEYS_DIR,'claude_key.json')), 0o777)
+    # Owner read/write only.
+    os.chmod(str(os.path.join(KEYS_DIR,'claude_key.json')), 0o600)
 
 
     return result
@@ -360,7 +371,7 @@ def get_llm_response(model,messages,temperature=1.0,return_raw_response=False,to
             port = model_config[config_idx]["port"]
             try:
                 vllm_client = OpenAI(
-                    api_key="EMPTY",
+                    api_key=_runtime_api_key("VLLM_API_KEY"),
                     base_url=f"http://{ip_addr}:{port}/v1",
                 )
                 chat_completion = vllm_client.chat.completions.create(

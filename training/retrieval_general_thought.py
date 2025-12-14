@@ -3,6 +3,8 @@ import json
 import asyncio
 from typing import List, Optional
 import argparse
+import re
+from pathlib import Path
 import faiss
 import torch
 import numpy as np
@@ -13,6 +15,27 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 from tavily import TavilyClient
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_CACHE_ROOT = (_PROJECT_ROOT / "cache").resolve()
+_SAFE_SLUG_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _safe_slug(value: Optional[str], default: str = "unknown") -> str:
+    if not value:
+        return default
+    v = str(value)
+    return v if _SAFE_SLUG_RE.fullmatch(v) else default
+
+
+def _safe_cache_dir(raw: Optional[str]) -> Path:
+    raw_value = raw or "cache/hle"
+    p = Path(raw_value)
+    resolved = p.resolve() if p.is_absolute() else (_PROJECT_ROOT / p).resolve()
+    if os.path.commonpath([str(_CACHE_ROOT), str(resolved)]) != str(_CACHE_ROOT):
+        raise ValueError(f"new_cache_dir must be within {_CACHE_ROOT}: {raw_value!r}")
+    resolved.mkdir(parents=True, exist_ok=True)
+    return resolved
 
 def load_corpus(corpus_path: str):
     corpus = datasets.load_dataset(
@@ -360,12 +383,14 @@ def retrieve_endpoint(request: QueryRequest):
             )
         except Exception as tavily_search_error:
             return resp
-        if not os.path.isdir(os.path.join(config.new_cache_dir,request.eid)):
-            os.makedirs(os.path.join(config.new_cache_dir,request.eid),exist_ok=True)
+        cache_root = _safe_cache_dir(config.new_cache_dir)
+        eid = _safe_slug(request.eid)
+        eid_dir = cache_root / eid
+        eid_dir.mkdir(parents=True, exist_ok=True)
         search_idx = 0
-        while os.path.isfile(os.path.join(config.new_cache_dir,request.eid,f"search_{search_idx}.json")):
+        while (eid_dir / f"search_{search_idx}.json").is_file():
             search_idx += 1
-        with open(os.path.join(config.new_cache_dir,request.eid,f"search_{search_idx}.json"),'w') as f:
+        with open(eid_dir / f"search_{search_idx}.json",'w') as f:
             json.dump(response,f,indent=2)
 
         def extract_web(extract_argument):
@@ -377,7 +402,7 @@ def retrieve_endpoint(request: QueryRequest):
                 )
             except Exception as tavily_extract_error:
                 return
-            with open(os.path.join(config.new_cache_dir,request.eid,f"extraction_{search_idx}_{extract_argument['extract_id']}.json"),'w') as f:
+            with open(eid_dir / f"extraction_{search_idx}_{extract_argument['extract_id']}.json",'w') as f:
                 json.dump(extraction,f,indent=2)
             extract_argument['raw_extraction'] = extraction
             return extract_argument
@@ -422,6 +447,10 @@ parser.add_argument('--example_id_file', type=str, default='general_thought_exam
 parser.add_argument('--tavily_key', type=str, default="")
 parser.add_argument('--port', type=int)
 args = parser.parse_args()
+
+# Harden path inputs (basename-only) to avoid path traversal.
+args.new_cache_dir = os.path.join("cache", os.path.basename(args.new_cache_dir))
+args.example_id_file = os.path.basename(args.example_id_file)
 
 tavily_key = os.environ.get('TAVILY_KEY',None)
 if not tavily_key:

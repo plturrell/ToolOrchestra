@@ -18,6 +18,11 @@ import json
 import time
 import subprocess, signal
 
+
+def _run(cmd: list[str]) -> None:
+    """Run a command safely without invoking a shell."""
+    subprocess.run(cmd, check=False)
+
 SERVE_REPEAT = 1
 serve_script = """#!/bin/bash
 
@@ -61,7 +66,8 @@ CUDA_VISIBLE_DEVICES=6,7 vllm serve Qwen/Qwen3-32B --enable-auto-tool-choice --t
 sleep 15000"""
 
 def get_jobs():
-    exec_result = subprocess.run(['squeue', '-u',os.environ.get('USER',None)], timeout=3600, capture_output=True, text=True)
+    user = os.environ.get("USER") or ""
+    exec_result = subprocess.run(['squeue', '-u', user], timeout=3600, capture_output=True, text=True)
     lines = exec_result.stdout.strip().split('\n')[1:]
     jobs = []
     for l in lines:
@@ -96,9 +102,11 @@ while True:
     jobs = get_jobs()
     for j in jobs:
         if j['reason'].strip().lower()=='held)':
-            os.system(f"scancel {j['id']}")
+            _run(["scancel", str(j["id"])])
             time.sleep(120)
     cur_ckpt_dir = os.getenv("CKPT_DIR")
+    if not cur_ckpt_dir:
+        raise ValueError("CKPT_DIR is not set")
     serve_collections = []
     for repeat in range(SERVE_REPEAT):
         exp_name = f"eaa_1{repeat}"
@@ -111,19 +119,19 @@ while True:
     job_names = [j['name'] for j in jobs]
     for j in jobs:
         if j['name'] not in serve_collections and j['name'].startswith('eaa'):
-            os.system(f"scancel {j['id']}")
+            _run(["scancel", str(j["id"])])
     for repeat in range(SERVE_REPEAT):
         exp_name = f"eaa_1{repeat}"
         if not exp_name in job_names:
             if os.path.isfile(f'{exp_name}.out'):
                 os.remove(f'{exp_name}.out')
-            os.system(f'sbatch {exp_name}.sh')
+            _run(["sbatch", f"{exp_name}.sh"])
     job_ids = [j['id'] for j in jobs]
     already_serve = []
     for j in jobs:
         if j['name'] in serve_collections and j['status'].strip().lower()=='r':
             if not os.path.isfile(f'{j["name"]}.out'):
-                os.system(f"scancel {j['id']}")
+                _run(["scancel", str(j["id"])])
             else:
                 if j['total_time']>=600:
                     already_serve.append({
@@ -162,18 +170,75 @@ while True:
         with open('eaa.json','w') as f:
             json.dump(model_config,f,indent=2)
 
-    os.system(f"python evaluation/tau2-bench/tau2/cli.py --domain retail --agent-llm {cur_ckpt_dir} "
-            f"--user-llm gpt-5 --num-trials 1 --task_path ../retail/tasks.json "
-            f"--max-steps 200 --output_file outputs/retail.json "
-            f"--model_config_path eaa.json --use_model_tool")
-    os.system(f"python evaluation/tau2-bench/tau2/cli.py --domain telecom --agent-llm {cur_ckpt_dir} "
-            f"--user-llm gpt-5 --num-trials 1 --task_path ../data_dir/tau2/domains/telecom/tasks.json "
-            f"--max-steps 200 --output_file outputs/telecom.json "
-            f"--model_config_path eaa.json --use_model_tool")
-    os.system(f"python evaluation/tau2-bench/tau2/cli.py --domain airline --agent-llm {cur_ckpt_dir} "
-            f"--user-llm gpt-5 --num-trials 1 --task_path ../data_dir/tau2/domains/airline/original_tasks.json "
-            f"--max-steps 200 --output_file outputs/airline.json "
-            f"--model_config_path eaa.json --use_model_tool")
+    _run(
+        [
+            "python",
+            "evaluation/tau2-bench/tau2/cli.py",
+            "--domain",
+            "retail",
+            "--agent-llm",
+            str(cur_ckpt_dir),
+            "--user-llm",
+            "gpt-5",
+            "--num-trials",
+            "1",
+            "--task_path",
+            "../retail/tasks.json",
+            "--max-steps",
+            "200",
+            "--output_file",
+            "outputs/retail.json",
+            "--model_config_path",
+            "eaa.json",
+            "--use_model_tool",
+        ]
+    )
+    _run(
+        [
+            "python",
+            "evaluation/tau2-bench/tau2/cli.py",
+            "--domain",
+            "telecom",
+            "--agent-llm",
+            str(cur_ckpt_dir),
+            "--user-llm",
+            "gpt-5",
+            "--num-trials",
+            "1",
+            "--task_path",
+            "../data_dir/tau2/domains/telecom/tasks.json",
+            "--max-steps",
+            "200",
+            "--output_file",
+            "outputs/telecom.json",
+            "--model_config_path",
+            "eaa.json",
+            "--use_model_tool",
+        ]
+    )
+    _run(
+        [
+            "python",
+            "evaluation/tau2-bench/tau2/cli.py",
+            "--domain",
+            "airline",
+            "--agent-llm",
+            str(cur_ckpt_dir),
+            "--user-llm",
+            "gpt-5",
+            "--num-trials",
+            "1",
+            "--task_path",
+            "../data_dir/tau2/domains/airline/original_tasks.json",
+            "--max-steps",
+            "200",
+            "--output_file",
+            "outputs/airline.json",
+            "--model_config_path",
+            "eaa.json",
+            "--use_model_tool",
+        ]
+    )
 
 
         
